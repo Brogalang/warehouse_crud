@@ -11,7 +11,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // ------------------------------
+        // Route Middleware alias
+        // ------------------------------
+        $middleware->alias([
+            'auth' => App\Http\Middleware\Authenticate::class,
+            'auth:sanctum' => \Illuminate\Auth\Middleware\Authenticate::class,
+            'role' => App\Http\Middleware\CheckRole::class,
+            'bindings' => Illuminate\Routing\Middleware\SubstituteBindings::class,
+            'throttle' => Illuminate\Routing\Middleware\ThrottleRequests::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

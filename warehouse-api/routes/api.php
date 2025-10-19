@@ -3,15 +3,45 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\ItemTransactionController;
+use App\Http\Controllers\Api\AuthController;
 
 Route::prefix('v1')->group(function () {
-    Route::apiResource('items', ItemController::class);
 
-    // transaksi item
-    Route::get('items/{itemId}/transactions', [ItemTransactionController::class, 'index']);
-    Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store']);
+    // ------------------------------
+    // Public: Register & Login
+    // ------------------------------
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
 
-    // update & delete transaksi
-    Route::put('transactions/{transaction}', [ItemTransactionController::class, 'update']);
-    Route::delete('transactions/{transaction}', [ItemTransactionController::class, 'destroy']);
+    // ------------------------------
+    // Routes yang butuh auth
+    // ------------------------------
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+        // ------------------------------
+        // Admin routes
+        // ------------------------------
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('items', ItemController::class);
+            Route::put('transactions/{transaction}', [ItemTransactionController::class, 'update']);
+            Route::delete('transactions/{transaction}', [ItemTransactionController::class, 'destroy']);
+        });
+
+        // ------------------------------
+        // Staff routes
+        // ------------------------------
+        Route::middleware('role:staff')->group(function () {
+            // Staff hanya bisa tambah transaksi
+            Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store']);
+        });
+
+        // ------------------------------
+        // Routes untuk Admin & Staff
+        // ------------------------------
+        Route::get('items', [ItemController::class, 'index']); // lihat semua item
+        Route::get('items/{itemId}', [ItemController::class, 'show']); // lihat detail item
+        Route::get('items/{itemId}/transactions', [ItemTransactionController::class, 'index']); // lihat transaksi item
+    });
 });
