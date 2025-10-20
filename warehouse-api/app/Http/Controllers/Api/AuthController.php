@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -27,10 +28,16 @@ class AuthController extends Controller
         // echo"<pre>";
 
         $token = $user->createToken('api-token')->plainTextToken;
+        // $tokenModel = $token->accessToken ?? null; // kalau model ada
+        // if ($tokenModel) {
+        //     $tokenModel->expires_at = now()->addHour();
+        //     $tokenModel->save();
+        // }
 
         return response()->json([
             'user' => $user,
             'token' => $token,
+            'expires_at' => now()->addHour(),
         ]);
     }
 

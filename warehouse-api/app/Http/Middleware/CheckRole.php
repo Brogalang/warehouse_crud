@@ -8,19 +8,20 @@ use Illuminate\Support\Facades\Auth;
 
 class CheckRole
 {
-    public function handle(Request $request, Closure $next, $roles)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
         $user = Auth::guard('sanctum')->user();
-
-        // pastikan $roles selalu array
-        if (is_string($roles)) {
-            $roles = explode(',', $roles);
-        }
-        \Log::info('User role: '.$user->role.' | Allowed roles: '.implode(',', $roles));
         echo"<pre>";
         print_r($roles);
         echo"</pre>";
-        if (!$user || !in_array($user->role, $roles)) {
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        \Log::info('User role: '.$user->role.' | Allowed roles: '.implode(',', $roles));
+
+        if (!in_array($user->role, $roles)) {
             return response()->json(['message' => 'Unauthorized CheckRole'], 403);
         }
 

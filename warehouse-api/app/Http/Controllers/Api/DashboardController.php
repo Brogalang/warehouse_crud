@@ -10,50 +10,66 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    /**
-     * Get stock movement summary per week.
-     *
-     * @return JsonResponse
-     */
     public function stockMovementPerWeek(): JsonResponse
     {
-        // Ambil tanggal 8 minggu terakhir
         $startDate = Carbon::now()->subWeeks(8)->startOfWeek();
 
-        // Ambil data transaksi, kelompokkan berdasarkan minggu dan tipe
         $transactions = ItemTransaction::select(
+                'item_id',
                 DB::raw("YEAR(created_at) as year"),
-                DB::raw("WEEK(created_at, 1) as week"), // 1 = minggu dimulai Senin
+                DB::raw("WEEK(created_at, 1) as week"),
                 'type',
                 DB::raw("SUM(quantity) as total")
             )
+            ->with('item:id,nama_barang')
             ->where('created_at', '>=', $startDate)
-            ->groupBy('year', 'week', 'type')
+            ->groupBy('item_id', 'year', 'week', 'type')
             ->orderBy('year')
             ->orderBy('week')
             ->get();
 
-        // Siapkan array data untuk frontend
         $labels = [];
-        $dataIn = [];
-        $dataOut = [];
-
-        // Generate label minggu terakhir 8 minggu
         for ($i = 7; $i >= 0; $i--) {
             $week = Carbon::now()->subWeeks($i)->weekOfYear;
-            $year = Carbon::now()->subWeeks($i)->year;
-            $labels[] = "Week $week";
+            $labels[] = "Minggu $week";
+        }
 
-            $weekData = $transactions->where('week', $week)->where('year', $year);
+        $items = $transactions->groupBy('item_id');
+        $datasets = [];
 
-            $dataIn[] = $weekData->where('type', 'in')->sum('total') ?? 0;
-            $dataOut[] = $weekData->where('type', 'out')->sum('total') ?? 0;
+        foreach ($items as $itemId => $itemTrans) {
+            $itemName = $itemTrans->first()->item->nama_barang ?? 'Tidak diketahui';
+
+            $dataIn = [];
+            $dataOut = [];
+
+            for ($i = 7; $i >= 0; $i--) {
+                $week = Carbon::now()->subWeeks($i)->weekOfYear;
+                $year = Carbon::now()->subWeeks($i)->year;
+                $weekData = $itemTrans->where('week', $week)->where('year', $year);
+
+                $dataIn[] = $weekData->where('type', 'in')->sum('total');
+                $dataOut[] = $weekData->where('type', 'out')->sum('total');
+            }
+
+            $color = sprintf('#%06X', mt_rand(0, 0xFFFFFF));
+
+            $datasets[] = [
+                'label' => "{$itemName} Masuk",
+                'data' => $dataIn,
+                'backgroundColor' => $color . 'CC', // warna solid
+            ];
+
+            $datasets[] = [
+                'label' => "{$itemName} Keluar",
+                'data' => $dataOut,
+                'backgroundColor' => $color . '77', // warna lebih muda
+            ];
         }
 
         return response()->json([
             'labels' => $labels,
-            'data_in' => $dataIn,
-            'data_out' => $dataOut,
+            'datasets' => array_values($datasets),
         ]);
     }
 }

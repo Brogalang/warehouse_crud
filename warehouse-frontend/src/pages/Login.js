@@ -4,7 +4,7 @@ import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 
-const API_URL = "http://127.0.0.1:8000/api/v1/login";
+const API_URL = "/login";
 
 export default function Login() {
   const { login } = useContext(AuthContext);

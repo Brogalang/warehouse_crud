@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import { AuthContext } from "../AuthContext"; // pastikan path benar
+import { AuthContext } from "../AuthContext";
 
-const API_URL = "http://127.0.0.1:8000/api/v1";
+const API_URL = "/api/v1";
 
 export default function ItemTransactions() {
   const { user, token } = useContext(AuthContext);
@@ -14,8 +14,10 @@ export default function ItemTransactions() {
   const [newTx, setNewTx] = useState({ type: "in", quantity: 0, reference: "", note: "" });
   const [editingTx, setEditingTx] = useState(null);
   const [deleteTxId, setDeleteTxId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
-  // Load items
+  // 🔹 Load items
   useEffect(() => {
     axios
       .get(`${API_URL}/items`, { headers })
@@ -23,7 +25,7 @@ export default function ItemTransactions() {
       .catch(err => console.error("Error loading items:", err));
   }, [token]);
 
-  // Load transaksi saat item dipilih
+  // 🔹 Load transaksi per item
   useEffect(() => {
     if (!selectedItemId) return setTransactions([]);
     axios
@@ -32,7 +34,7 @@ export default function ItemTransactions() {
       .catch(err => console.error("Error fetching transactions:", err));
   }, [selectedItemId, token]);
 
-  // Tambah transaksi (admin & staff)
+  // 🔹 Tambah transaksi (admin & staff)
   const handleAddTransaction = async () => {
     if (!selectedItemId || newTx.quantity <= 0) {
       alert("Pilih item dan masukkan jumlah valid!");
@@ -49,7 +51,7 @@ export default function ItemTransactions() {
     }
   };
 
-  // Update transaksi (admin only)
+  // 🔹 Update transaksi (admin only)
   const handleUpdateTransaction = async () => {
     if (user?.role !== "admin") return;
     try {
@@ -63,10 +65,9 @@ export default function ItemTransactions() {
     }
   };
 
-  // Delete transaksi (admin only)
+  // 🔹 Delete transaksi (admin only)
   const handleDeleteTransaction = async () => {
-    if (user?.role !== "admin") return;
-    if (!deleteTxId) return;
+    if (user?.role !== "admin" || !deleteTxId) return;
     try {
       await axios.delete(`${API_URL}/transactions/${deleteTxId}`, { headers });
       setTransactions(transactions.filter(tx => tx.id !== deleteTxId));
@@ -77,36 +78,82 @@ export default function ItemTransactions() {
     }
   };
 
+  // 🔹 Sort & Search
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
+    setSortConfig({ key, direction });
+  };
+
+  const sortedTransactions = React.useMemo(() => {
+    let sortable = [...transactions];
+    if (sortConfig.key) {
+      sortable.sort((a, b) => {
+        let aValue = a[sortConfig.key] ?? "";
+        let bValue = b[sortConfig.key] ?? "";
+        if (typeof aValue === "string") aValue = aValue.toLowerCase();
+        if (typeof bValue === "string") bValue = bValue.toLowerCase();
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortable;
+  }, [transactions, sortConfig]);
+
+  const filteredTransactions = sortedTransactions.filter((tx) => {
+    const ref = tx.reference?.toLowerCase() || "";
+    const note = tx.note?.toLowerCase() || "";
+    return ref.includes(searchTerm.toLowerCase()) || note.includes(searchTerm.toLowerCase());
+  });
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key === key) return sortConfig.direction === "asc" ? " ▲" : " ▼";
+    return "";
+  };
+
+  // 🔹 Render
   return (
-    <div style={{ padding: "30px", fontFamily: "Arial, sans-serif", maxWidth: "900px", margin: "0 auto" }}>
+    <div style={{ padding: "30px", fontFamily: "Arial, sans-serif", maxWidth: "1000px", margin: "0 auto" }}>
       <h2 style={{ textAlign: "center", color: "#2d4c74", marginBottom: "20px" }}>Item Transactions</h2>
 
-      {/* Select Item */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", alignItems: "center" }}>
+      {/* Pilih item */}
+      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
         <select
           value={selectedItemId}
           onChange={(e) => setSelectedItemId(e.target.value)}
           style={{ flex: "1", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
         >
-          <option value="">Select item</option>
-          {items.map(item => (
+          <option value="">Pilih Item</option>
+          {items.map((item) => (
             <option key={item.id} value={item.id}>{item.nama_barang}</option>
           ))}
         </select>
       </div>
 
-      {/* Tambah transaksi (admin & staff) */}
+      {/* Search */}
+      <div style={{ marginBottom: "15px", display: "flex", justifyContent: "flex-end" }}>
+        <input
+          type="text"
+          placeholder="Cari reference atau note..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", width: "250px" }}
+        />
+      </div>
+
+      {/* Tambah transaksi */}
       {selectedItemId && (
         <div style={{
           marginBottom: "25px",
           padding: "15px",
           borderRadius: "8px",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
           background: "#f5f5f5",
           display: "flex",
           gap: "10px",
           flexWrap: "wrap",
-          alignItems: "center"
+          alignItems: "center",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
         }}>
           <select
             value={newTx.type}
@@ -139,30 +186,30 @@ export default function ItemTransactions() {
           />
           <button
             onClick={handleAddTransaction}
-            style={{ padding: "8px 15px", borderRadius: "4px", border: "none", background: "#4caf50", color: "#fff", cursor: "pointer" }}
+            style={{ padding: "8px 15px", borderRadius: "4px", border: "none", background: "#2d4c74", color: "#fff", cursor: "pointer" }}
           >
-            Add Transaction
+            Tambah
           </button>
         </div>
       )}
 
-      {/* Table */}
+      {/* Tabel transaksi */}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "#2d4c74", color: "#fff" }}>
+          <thead style={{ background: "#2d4c74", color: "#fff", cursor: "pointer" }}>
             <tr>
-              <th style={{ padding: "10px", textAlign: "left" }}>ID</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Type</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Quantity</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Reference</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Note</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Date</th>
-              <th style={{ padding: "10px", textAlign: "left" }}>Actions</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("id")}>ID{getSortIndicator("id")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("type")}>Type{getSortIndicator("type")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("quantity")}>Quantity{getSortIndicator("quantity")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("reference")}>Reference{getSortIndicator("reference")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("note")}>Note{getSortIndicator("note")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }} onClick={() => requestSort("created_at")}>Date{getSortIndicator("created_at")}</th>
+              <th style={{ padding: "10px", textAlign: "left" }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {transactions.length > 0 ? (
-              transactions.map(tx => (
+            {filteredTransactions.length > 0 ? (
+              filteredTransactions.map(tx => (
                 <tr key={tx.id} style={{ borderBottom: "1px solid #ddd" }}>
                   {editingTx?.id === tx.id ? (
                     <>
@@ -173,19 +220,13 @@ export default function ItemTransactions() {
                           <option value="out">OUT</option>
                         </select>
                       </td>
-                      <td>
-                        <input type="number" value={editingTx.quantity} onChange={e => setEditingTx({ ...editingTx, quantity: parseInt(e.target.value) })} style={{ width: "80px" }} />
-                      </td>
-                      <td><input type="text" value={editingTx.reference || ""} onChange={e => setEditingTx({ ...editingTx, reference: e.target.value })} /></td>
-                      <td><input type="text" value={editingTx.note || ""} onChange={e => setEditingTx({ ...editingTx, note: e.target.value })} /></td>
+                      <td><input type="number" value={editingTx.quantity} onChange={e => setEditingTx({ ...editingTx, quantity: parseInt(e.target.value) })} style={{ width: "80px" }} /></td>
+                      <td><input value={editingTx.reference || ""} onChange={e => setEditingTx({ ...editingTx, reference: e.target.value })} /></td>
+                      <td><input value={editingTx.note || ""} onChange={e => setEditingTx({ ...editingTx, note: e.target.value })} /></td>
                       <td>{new Date(tx.created_at).toLocaleString()}</td>
                       <td>
-                        {user?.role === "admin" && (
-                          <>
-                            <button onClick={handleUpdateTransaction} style={{ marginRight: "5px", background: "#4caf50", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px" }}>Simpan</button>
-                            <button onClick={() => setEditingTx(null)} style={{ background: "#f44336", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px" }}>Batal</button>
-                          </>
-                        )}
+                        <button onClick={handleUpdateTransaction} style={{ background: "#4caf50", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px" }}>Simpan</button>
+                        <button onClick={() => setEditingTx(null)} style={{ background: "#f44336", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", marginLeft: "5px" }}>Batal</button>
                       </td>
                     </>
                   ) : (
@@ -197,21 +238,19 @@ export default function ItemTransactions() {
                       <td>{tx.note || "-"}</td>
                       <td>{new Date(tx.created_at).toLocaleString()}</td>
                       <td>
-                        {user?.role === "admin" ? (
+                        {user?.role === "admin" && (
                           <>
-                            <button onClick={() => setEditingTx(tx)} style={{ marginRight: "5px", background: "#2196f3", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px" }}>Edit</button>
+                            <button onClick={() => setEditingTx(tx)} style={{ background: "#2196f3", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", marginRight: "5px" }}>Edit</button>
                             <button onClick={() => setDeleteTxId(tx.id)} style={{ background: "#f44336", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px" }}>Hapus</button>
                           </>
-                        ) : null}
+                        )}
                       </td>
                     </>
                   )}
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan="7" align="center" style={{ padding: "10px" }}>Tidak ada transaksi</td>
-              </tr>
+              <tr><td colSpan="7" align="center" style={{ padding: "10px" }}>Tidak ada transaksi</td></tr>
             )}
           </tbody>
         </table>
@@ -220,19 +259,15 @@ export default function ItemTransactions() {
       {/* Modal konfirmasi hapus */}
       {deleteTxId && (
         <div style={{
-          position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 999
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 999
         }}>
           <div style={{ background: "#fff", padding: "20px", borderRadius: "8px", width: "300px", textAlign: "center" }}>
             <p>Yakin ingin hapus transaksi ini?</p>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "15px" }}>
-              <button onClick={() => setDeleteTxId(null)} style={{ padding: "6px 12px", borderRadius: "4px", border: "1px solid #ccc", cursor: "pointer" }}>Batal</button>
-              <button onClick={handleDeleteTransaction} style={{ padding: "6px 12px", borderRadius: "4px", border: "none", background: "#f44336", color: "#fff", cursor: "pointer" }}>Hapus</button>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "15px", gap: "10px" }}>
+              <button onClick={() => setDeleteTxId(null)} style={{ padding: "6px 12px", borderRadius: "4px", border: "1px solid #ccc" }}>Batal</button>
+              <button onClick={handleDeleteTransaction} style={{ padding: "6px 12px", borderRadius: "4px", border: "none", background: "#f44336", color: "#fff" }}>Hapus</button>
             </div>
           </div>
         </div>

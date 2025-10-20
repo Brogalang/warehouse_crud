@@ -1,3 +1,28 @@
+# ----------------------------------------------------
+# KRUSIAL: BLOK PENANGANAN CORS UNTUK APACHE
+# ----------------------------------------------------
+
+# Requires Apache mod_headers to be enabled (which it is in the default PHP-Apache image)
+<IfModule mod_headers>
+    # Set the CORS headers
+    Header set Access-Control-Allow-Origin "http://localhost:3000"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With"
+    Header set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# Handle Preflight OPTIONS requests (which require a 204 No Content response)
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=204,L]
+
+# ----------------------------------------------------
+# END OF CORS HEADER BLOCK
+# ----------------------------------------------------
+
+# ----------------------------------------------------
+# LARAVEL DEFAULT REWRITE RULES (Your original code follows here)
+# ----------------------------------------------------
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

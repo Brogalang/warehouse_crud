@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  # Backend Laravel
+  backend:
+    build: ./warehouse-api
+    container_name: warehouse_api
+    ports:
+      - "8000:80"
+    volumes:
+      - ./warehouse-api:/var/www/html
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=warehouse
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - SANCTUM_STATEFUL_DOMAINS=localhost:3000
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Frontend React
+  frontend:
+    build: ./warehouse-frontend
+    container_name: warehouse_frontend
+    ports:
+      - "3000:3000"
+    working_dir: /app
+    volumes:
+      - ./warehouse-frontend:/app
+    command: ["npm", "start"]
+    environment:
+      - REACT_APP_API_URL=http://backend
+    depends_on:
+      - backend
+
+  # MySQL Database
+  mysql:
+    image: mysql:8
+    container_name: warehouse_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: warehouse
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mysql_data:

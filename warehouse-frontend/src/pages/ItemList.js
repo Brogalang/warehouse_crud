@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../AuthContext"; // path ke file AuthContext.js
 import axios from "axios";
+import Swal from "sweetalert2";
 
-const API_URL_ITEMS = "http://127.0.0.1:8000/api/v1/items";
-const API_URL_TRANSACTIONS = "http://127.0.0.1:8000/api/v1/transactions";
+const API_URL_ITEMS = "/api/v1/items";
+const API_URL_TRANSACTIONS = "/api/v1/transactions";
 
 export default function ItemList() {
   const [items, setItems] = useState([]);
@@ -37,18 +38,75 @@ export default function ItemList() {
   }, []);
 
   // ===== ADMIN CRUD ITEM =====
+  // const handleAdd = async () => {
+  //   // hanya admin dan staff yang boleh tambah item
+  //   if (user?.role !== "admin" && user?.role !== "staff") {
+  //     alert("Hanya admin dan staff yang boleh menambah barang!");
+  //     return;
+  //   }
+
+  //   if (!newItem.nama_barang || !newItem.sku) {
+  //     alert("Isi nama dan SKU terlebih dahulu!");
+  //     return;
+  //   }
+
+  //   try {
+  //     await axios.post(API_URL_ITEMS, newItem, { headers });
+  //     setNewItem({ nama_barang: "", sku: "", stok: 0, lokasi_rak: "" });
+  //     fetchItems();
+  //   } catch (err) {
+  //     console.error("Error adding item:", err.response?.data || err.message);
+  //   }
+  // };
+
   const handleAdd = async () => {
-    if (user?.role !== "admin") return; // hanya admin
-    if (!newItem.nama_barang || !newItem.sku) {
-      alert("Isi nama dan SKU terlebih dahulu!");
+    // hanya admin dan staff yang boleh tambah item
+    if (user?.role !== "admin" && user?.role !== "staff") {
+      Swal.fire({
+        icon: "warning",
+        title: "Akses Ditolak!",
+        text: "Hanya admin dan staff yang boleh menambah barang!",
+        confirmButtonColor: "#2d4c74",
+      });
       return;
     }
+
+    if (!newItem.nama_barang || !newItem.sku) {
+      Swal.fire({
+        icon: "warning",
+        title: "Data belum lengkap",
+        text: "Isi nama barang dan SKU terlebih dahulu!",
+        confirmButtonColor: "#2d4c74",
+      });
+      return;
+    }
+
     try {
       await axios.post(API_URL_ITEMS, newItem, { headers });
       setNewItem({ nama_barang: "", sku: "", stok: 0, lokasi_rak: "" });
       fetchItems();
+
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: "Barang berhasil ditambahkan.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error("Error adding item:", err.response?.data || err.message);
+
+      const msg =
+        err.response?.data?.errors?.sku?.[0] ||
+        err.response?.data?.message ||
+        "Terjadi kesalahan saat menambahkan item.";
+
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Menambahkan Barang",
+        text: msg,
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
@@ -74,18 +132,56 @@ export default function ItemList() {
     setShowDeleteModal(true);
   };
 
-  const handleDelete = async () => {
-    if (user?.role !== "admin") return;
-    if (!itemToDelete) return;
-    try {
-      await axios.delete(`${API_URL_ITEMS}/${itemToDelete.id}`, { headers });
-      setShowDeleteModal(false);
-      setItemToDelete(null);
-      fetchItems();
-    } catch (err) {
-      console.error("Error deleting item:", err.response?.data || err.message);
-    }
+  // const handleDelete = async () => {
+  //   if (user?.role !== "admin") return;
+  //   if (!itemToDelete) return;
+  //   try {
+  //     await axios.delete(`${API_URL_ITEMS}/${itemToDelete.id}`, { headers });
+  //     setShowDeleteModal(false);
+  //     setItemToDelete(null);
+  //     fetchItems();
+  //   } catch (err) {
+  //     console.error("Error deleting item:", err.response?.data || err.message);
+  //   }
+  // };
+  const handleDelete = async (id) => {
+    Swal.fire({
+      title: "Yakin ingin menghapus?",
+      text: "Data barang ini akan dihapus secara permanen.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Ya, hapus!",
+      cancelButtonText: "Batal",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`${API_URL_ITEMS}/${id}`, { headers });
+          fetchItems();
+
+          Swal.fire({
+            icon: "success",
+            title: "Berhasil dihapus!",
+            text: "Barang telah dihapus dari daftar.",
+            timer: 1500,
+            showConfirmButton: false,
+          });
+        } catch (err) {
+          console.error("Error deleting item:", err.response?.data || err.message);
+          Swal.fire({
+            icon: "error",
+            title: "Gagal Menghapus",
+            text:
+              err.response?.data?.message ||
+              "Terjadi kesalahan saat menghapus barang.",
+            confirmButtonColor: "#d33",
+          });
+        }
+      }
+    });
   };
+
 
   // ===== TRANSAKSI (ADMIN + STAFF) =====
   const handleAddTransaction = async (itemId, qty) => {
@@ -137,7 +233,7 @@ export default function ItemList() {
       <h2 style={{ textAlign: "center", marginBottom: "20px", color: "#2d4c74" }}>Daftar Barang</h2>
 
       {/* Form tambah item hanya admin */}
-      {user?.role === "admin" && (
+      {(user?.role === "admin" || user?.role === "staff") && (
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", background: "#f5f5f5", padding: "15px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
           <input type="text" placeholder="Nama Barang" value={newItem.nama_barang} onChange={(e) => setNewItem({ ...newItem, nama_barang: e.target.value })} style={{ flex: "1", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} />
           <input type="text" placeholder="SKU" value={newItem.sku} onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })} style={{ flex: "1", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }} />
@@ -192,12 +288,15 @@ export default function ItemList() {
                       ) : (
                         <>
                           <button onClick={() => handleEdit(item)} style={{ background: "#2196f3", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>Edit</button>
-                          <button onClick={() => confirmDelete(item)} style={{ background: "#f44336", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>Hapus</button>
+                          <button onClick={() => handleDelete(item.id)} style={{ background: "#f44336", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>Hapus</button>
                         </>
                       )
-                    ) : (
-                      <button onClick={() => handleAddTransaction(item.id, 1)} style={{ background: "#4caf50", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>Tambah Transaksi</button>
-                    )}
+                    ) : 
+                    (
+                      <></>
+                      // <button onClick={() => handleAddTransaction(item.id, 1)} style={{ background: "#4caf50", color: "#fff", border: "none", padding: "5px 10px", borderRadius: "4px", cursor: "pointer" }}>Tambah Transaksi</button>
+                    )
+                    }
                   </td>
                 </tr>
               ))
