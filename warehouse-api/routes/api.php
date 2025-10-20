@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\ItemTransactionController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 
 Route::prefix('v1')->group(function () {
 
@@ -12,6 +13,9 @@ Route::prefix('v1')->group(function () {
     // ------------------------------
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('dashboard/stock-movement', [DashboardController::class, 'stockMovementPerWeek']);
+    });
 
     // ------------------------------
     // Routes yang butuh auth
@@ -27,15 +31,21 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('items', ItemController::class);
             Route::put('transactions/{transaction}', [ItemTransactionController::class, 'update']);
             Route::delete('transactions/{transaction}', [ItemTransactionController::class, 'destroy']);
+            // Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store']);
+            // Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store'])
+            //     ->middleware('role:admin');
         });
+        // Admin + Staff
+        Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store'])
+            ->middleware('role:admin,staff');
 
         // ------------------------------
         // Staff routes
         // ------------------------------
-        Route::middleware('role:staff')->group(function () {
-            // Staff hanya bisa tambah transaksi
-            Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store']);
-        });
+        // Route::middleware('role:staff')->group(function () {
+        //     // Staff hanya bisa tambah transaksi
+        //     // Route::post('items/{itemId}/transactions', [ItemTransactionController::class, 'store']);
+        // });
 
         // ------------------------------
         // Routes untuk Admin & Staff

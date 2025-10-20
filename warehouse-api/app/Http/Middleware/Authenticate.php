@@ -13,7 +13,7 @@ class Authenticate
         $user = Auth::guard('sanctum')->user();
        \Log::info('Authenticated User:', ['user' => $user]);
         if (!$user) {
-            return response()->json(['message' => 'TIDAK ADA DI AUTHENTICATE'], 401);
+            return response()->json(['message' => 'Unauthorized Auth'], 401);
         }
         return $next($request);
     }
