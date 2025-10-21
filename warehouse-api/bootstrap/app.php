@@ -11,11 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        
 
         $middleware->api(prepend: [
             // HandleCors HARUS ADA di sini untuk memproses permintaan OPTIONS (Preflight)
             \Illuminate\Http\Middleware\HandleCors::class, 
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
         // ------------------------------
         // Route Middleware alias

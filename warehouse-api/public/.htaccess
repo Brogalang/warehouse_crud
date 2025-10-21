@@ -1,50 +1,38 @@
 # ----------------------------------------------------
-# KRUSIAL: BLOK PENANGANAN CORS UNTUK APACHE
+# 🌐 CORS HANDLING FOR APACHE (Laravel + React)
 # ----------------------------------------------------
-
-# Requires Apache mod_headers to be enabled (which it is in the default PHP-Apache image)
-<IfModule mod_headers>
-    # Set the CORS headers
-    Header set Access-Control-Allow-Origin "http://localhost:3000"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With"
-    Header set Access-Control-Allow-Credentials "true"
+Header always set X-Debug-HTACCESS "active"
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "http://localhost:3000"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, X-XSRF-Token"
+    Header always set Access-Control-Allow-Credentials "true"
 </IfModule>
 
-# Handle Preflight OPTIONS requests (which require a 204 No Content response)
+# ✅ Handle Preflight OPTIONS requests
+RewriteEngine On
 RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=204,L]
+RewriteRule ^(.*)$ - [R=204,L]
 
 # ----------------------------------------------------
-# END OF CORS HEADER BLOCK
+# 🚀 LARAVEL DEFAULT REWRITE RULES
 # ----------------------------------------------------
-
-# ----------------------------------------------------
-# LARAVEL DEFAULT REWRITE RULES (Your original code follows here)
-# ----------------------------------------------------
-
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
 
-    RewriteEngine On
-
-    # Handle Authorization Header
+    # Authorization header pass-through
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Handle X-XSRF-Token Header
-    RewriteCond %{HTTP:x-xsrf-token} .
-    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # Send Requests To Front Controller (index.php)
     RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 </IfModule>

@@ -1,7 +1,9 @@
-version: "3.9"
+# docker-compose.yml
 
 services:
-  # Backend Laravel
+  # =========================
+  # 🧠 Backend (Laravel)
+  # =========================
   backend:
     build: ./warehouse-api
     container_name: warehouse_api
@@ -10,19 +12,26 @@ services:
     volumes:
       - ./warehouse-api:/var/www/html
     environment:
-      - DB_HOST=mysql
-      - DB_DATABASE=warehouse
-      - DB_USERNAME=root
-      - DB_PASSWORD=secret
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8000
-      - SANCTUM_STATEFUL_DOMAINS=localhost:3000
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      SANCTUM_STATEFUL_DOMAINS: localhost:3000
+
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: warehouse
+      DB_USERNAME: root
+      DB_PASSWORD: secret
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - app_network  
 
-  # Frontend React
+  # =========================
+  # ⚛️ Frontend (React)
+  # =========================
   frontend:
     build: ./warehouse-frontend
     container_name: warehouse_frontend
@@ -33,11 +42,15 @@ services:
       - ./warehouse-frontend:/app
     command: ["npm", "start"]
     environment:
-      - REACT_APP_API_URL=http://backend
+      - REACT_APP_API_URL=http://localhost:8000/v1/api
     depends_on:
       - backend
+    networks:
+      - app_network 
 
-  # MySQL Database
+  # =========================
+  # 🗄️ MySQL Database
+  # =========================
   mysql:
     image: mysql:8
     container_name: warehouse_db
@@ -55,6 +68,15 @@ services:
       timeout: 20s
       retries: 10
       start_period: 30s
+    networks:
+      - app_network
 
+# =========================
+# 📦 Shared volumes & network
+# =========================
 volumes:
   mysql_data:
+
+networks:
+  app_network:
+    driver: bridge
