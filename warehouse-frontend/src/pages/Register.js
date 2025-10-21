@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "/api/v1/register";
+const API_URL = "http://localhost:8000/api/v1";
 
 export default function Register() {
   const [name, setName] = useState("");

@@ -14,7 +14,7 @@ import { AuthContext } from "../AuthContext";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const API_URL = "/api/v1";
+const API_URL = "http://localhost:8000/api/v1";
 
 export default function Dashboard() {
   const { token } = useContext(AuthContext);

@@ -3,8 +3,8 @@ import { AuthContext } from "../AuthContext"; // path ke file AuthContext.js
 import axios from "axios";
 import Swal from "sweetalert2";
 
-const API_URL_ITEMS = "/items";
-const API_URL_TRANSACTIONS = "/transactions";
+const API_URL_ITEMS = "http://localhost:8000/api/v1/items";
+const API_URL_TRANSACTIONS = "http://localhost:8000/api/v1/transactions";
 
 export default function ItemList() {
   const [items, setItems] = useState([]);

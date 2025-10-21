@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 
-const API_URL = "/api/v1";
+const API_URL = "http://localhost:8000/api/v1";
 
 export default function ItemTransactions() {
   const { user, token } = useContext(AuthContext);
